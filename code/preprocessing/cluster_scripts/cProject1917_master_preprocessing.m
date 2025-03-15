@@ -23,7 +23,7 @@ Project1917_cluster_shell_parSUBRUN(parms);
 
 %% 2. bad channel and segment detection
 parms = [];
-parms.subjects = 3;
+parms.subjects = 15;
 parms.runs = 1:6;
 
 Project1917_preproc2_cleaning(parms) % got here

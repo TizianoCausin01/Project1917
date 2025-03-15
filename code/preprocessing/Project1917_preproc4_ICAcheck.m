@@ -3,10 +3,9 @@ function Project1917_preproc4_ICAcheck(parms)
 % preprocessing - IC check and rejection
 
 % set paths
-rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
-
+rootdir = '/Volumes';
 % start up Fieldtrip
-addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
+addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
 ft_defaults
 
 for isub = parms.subjects
@@ -17,6 +16,7 @@ for isub = parms.subjects
 
         fn2load = sprintf('%s%sdata_reref_filt_trim_sub%03d_run%02d',indir,filesep,isub,irun);
         load(fn2load,'data');
+        beep
 
         % load bad channels and bad segments and remove before ICA checking
         fn2load = sprintf('%s%sbadchan_sub%03d_run%02d',indir,filesep,isub,irun);
@@ -25,6 +25,7 @@ for isub = parms.subjects
         cfg = [];
         cfg.channel = megchan_keep(:)';
         data = ft_selectdata(cfg, data);
+        beep
 
         fn2load = sprintf('%s%sbadseg_sub%03d_run%02d',indir,filesep,isub,irun);
         load(fn2load, 'BAD_lowfreq','BAD_muscle');
@@ -45,6 +46,7 @@ for isub = parms.subjects
         % load ICA components
         fn2load = sprintf('%s%sica_weights_sub%03d_run%02d',indir,filesep,isub,irun);
         load(fn2load,'unmixing', 'topolabel');
+        beep
 
         % now plot components for check
         cfg = [];
@@ -54,6 +56,7 @@ for isub = parms.subjects
         cfg.topolabel = topolabel;
         cfg.unmixing = unmixing;
         comp = ft_componentanalysis(cfg, data);
+        beep
 
         comp.trial{1}(:,~samples2keep) = NaN;
 
@@ -64,16 +67,17 @@ for isub = parms.subjects
         cfg.channel = comp.label(1:20);
         cfg.compscale = 'local';
         ft_databrowser(cfg, comp);
-
+        beep
+%%
         fprintf('*** SUBJECT %02d : save the identified components!!! ***\n', isub);
 
         % write down and save
         badcomps = [];
         badcomps_reasons = {};
         badcount = 0;
-        while 1
+        while 1 % press 0 to escape
             newcomp = input('component: ');
-            if newcomp == 0
+            if newcomp == 0 
                 break
             else
                 badcount = badcount + 1;
@@ -84,7 +88,7 @@ for isub = parms.subjects
         end
 
         assert(numel(badcomps) == numel(badcomps_reasons));
-
+%%
         fn2save = sprintf('%s%sica_badcomps_sub%03d_run%02d',indir,filesep,isub,irun);
         save(fn2save, 'badcomps', 'badcomps_reasons');
         clear comp

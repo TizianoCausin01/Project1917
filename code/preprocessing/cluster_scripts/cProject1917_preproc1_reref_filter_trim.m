@@ -1,4 +1,4 @@
- addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
+addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
 rootdir = "/mnt/storage/tier2/ingdev/projects/Project1917"
 subjects=4:10
 runs=1:6
@@ -6,12 +6,16 @@ preproc_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/data_preproc"
 for isub=subjects
     isub
     for irun=runs
-   cProject1917_preproc1_reref_filt_trim(isub, irun, rootdir, preproc_dir)
+        cProject1917_preproc1_reref_filt_trim(isub, irun, rootdir, preproc_dir)
     end
 end
 %% function definition
 function cProject1917_preproc1_reref_filt_trim(isub, irun, data_dir, preproc_dir)
 data_dir = sprintf('%s%sdata%ssub-%03d',data_dir,filesep,filesep,isub);
+preproc_dir = sprintf('%s%ssub-%03d',preproc_dir,filesep,isub);
+if ~exist(preproc_dir,'dir')
+    mkdir(preproc_dir);
+end
 MEGdir = dir(sprintf('%s%sses-meg01%smeg%s*.ds*',data_dir,filesep,filesep,filesep)); % extracting the meatadata from this file
 MEGdir = fullfile(MEGdir.folder,MEGdir.name); % appends the parent directory and the filename of the .ds file
 outdir = sprintf('%s%spreprocessing',preproc_dir,filesep);
@@ -175,6 +179,11 @@ data.time{1}(end-length(occ2remove)+1:end) = [];
 data.sampleinfo(2) = data.sampleinfo(2) - length(occ2remove);
 
 fn2save = sprintf('%s%sdata_reref_filt_trim_sub%03d_run%02d',outdir,filesep,isub,irun);
+% DOWNSAMPLING PART
+cfg = [];
+cfg.resamplefs = 600;
+cfg.method = 'resample';
+data = ft_resampledata(cfg, data);
 save(fn2save,'data', '-v7.3');
 clear data
 end

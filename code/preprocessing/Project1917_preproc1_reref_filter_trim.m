@@ -9,14 +9,14 @@ if isfield(parms,'cluster')
     addpath('//mnt/storage/tier2/morwur/Projects/INGMAR/toolboxes/fieldtrip-20231220');
 else
     % set paths
-    rootdir = 'smb://cimec-storage6.cimec.unitn.it/ingdev/Projects/Project1917';
+    rootdir = '/Volumes';
     % start up Fieldtrip
-    addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
+    addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
 end
 
 datadir = sprintf('%s%sdata%ssub-%03d',rootdir,filesep,filesep,isub);
-MEGdir = dir(sprintf('%s%sses-meg01%smeg%s*.ds*',datadir,filesep,filesep,filesep));
-MEGdir = fullfile(MEGdir.folder,MEGdir.name);
+MEGdir = dir(sprintf('%s%sses-meg01%smeg%s*.ds*',datadir,filesep,filesep,filesep)); % extracting the meatadata from this file
+MEGdir = fullfile(MEGdir.folder,MEGdir.name); % appends the parent directory and the filename of the .ds file
 outdir = sprintf('%s%spreprocessing',datadir,filesep);
 if ~exist(outdir,'dir')
     mkdir(outdir);
@@ -29,10 +29,11 @@ ft_defaults
 fsample = 1200; % sampling frequency
 constant_delay_photodiode = 10; % add additional 10 samples, because photodiode (and therefore stimulus) always 1 screen refresh cycle behind MEG trigger, which at 120Hz is 8.333 msec, or at 1200Hz MEG signal, 10 samples.
 starttrigger = 2;
+stoptrigger = 255;
 
 % load events
-events = ft_read_event(MEGdir); % reads the whole time series in memory, I think
-
+events = ft_read_event(MEGdir); % reads the whole time series of information about trigges/stimuli/catch trials ... in memory
+beep
 % select only the trigger channel called 'UPPT001'
 events = events(strcmp(extractfield(events,'type'),'UPPT001'));
 
@@ -40,51 +41,61 @@ events = events(strcmp(extractfield(events,'type'),'UPPT001'));
 temp = num2cell(extractfield(events,'sample')+constant_delay_photodiode);
 [events.sample] = temp{:};
 
-% to extract the datapts corresponding to the beginning and end of trial
+% to extract the datapts corresponding to the beginning and end of runs
 startID = find(extractfield(events,'value')==starttrigger);% start from second trigger, because strange inconsistent delay between first two, and we want to exclude movie onset anyway
-endID = find(extractfield(events,'value') == 255);% i.e., trigger for movie end
+endID = find(extractfield(events,'value') == stoptrigger);% i.e., trigger for movie end
 startsample = extractfield(events(startID),'sample');
-endsample = extractfield(events(endID),'sample')+1*fsample;% add extra sec
+endsample = extractfield(events(endID),'sample')+1*fsample; % add extra sec
 
 % select channels and segment belonging to irun and load data
 cfg = [];
-cfg.dataset = MEGdir; % just a dir
-cfg.continuous = 'yes';% default is cutting into trials based on triggers, but we want to keep continuous
+cfg.dataset = MEGdir; % the path of the data
+cfg.continuous = 'yes'; % default is cutting into trials based on triggers, but we want to keep continuous
 cfg.trl = [startsample(irun) endsample(irun) 0]; % 0 is just padding for the ft_preprocessing func
 cfg.channel = {'MEG', 'MEGREF', 'UPPT001'};
-data = ft_preprocessing(cfg); % just reading the data here - >data end up being chans by timepoints{[array]}
-
+% (991 secs)
+data = ft_preprocessing(cfg); % just reading the data of the first run here - > data end up being chans by timepoints{[array]}
+beep
 % in some rare cases something strange like a instantaneous baseline jump
 % (sub15, run6), or huge blinks (sub02), we need to remove these BEFORE the
 % rereferencing and filtering below as this would make it worse.
 if isub == 15 && irun == 6
     badt = [181.6 181.8];
     badID = dsearchn(data.time{1}',badt');
-    
+
     % subtract baseline separately before and after the jump
     data.trial{1}(:,1:badID(1)) = data.trial{1}(:,1:badID(1)) - repmat(mean(data.trial{1}(:,1:badID(1)),2),1,length(1:badID(1)));
     data.trial{1}(:,badID(2)+1:end) = data.trial{1}(:,badID(2)+1:end) - repmat(mean(data.trial{1}(:,badID(2)+1:end),2),1,length(data.time{1})-badID(2));
     data.trial{1}(:,badID(1)+1:badID(2)) = 0;
 end
 
-% 3rd order gradient correction (?)
+% 3rd order gradient correction (?) (48sec)
 cfg = [];
 cfg.gradient = 'G3BR'; % reference to external electrodes
 data = ft_denoise_synthetic(cfg, data);
-
+beep
 % demean and filter
+%%
+% cfg = [];
+% cfg.resamplefs = 600
+% cfg.method = 'resample'
+% data = ft_resampledata(cfg, data)
+%%
 cfg = [];
+cfg.bsfreq = [49.9 50.1; 99.9 100.1; 149.9 150.1];
 cfg.demean = 'yes';
-cfg.padding = 1000;% our video is almost 900 sec long, and we need a lot of extra padding for such a low cutoff of 0.01 Hz (?)
+cfg.padding = 1000; % new length of the video in seconds (we are adding 50s at the beginning and end) our video is almost 900 sec long, and we need a lot of extra padding for such a low cutoff of 0.01 Hz ->
 cfg.padtype = 'mirror';% we need to use mirror because there is no extra data
 cfg.hpfilter = 'yes'; % high-pass filter
 cfg.hpfreq = 0.01; % takes off freq below it
 cfg.hpfiltord = 2; % (?)
 cfg.bsfilter = 'yes'; % band-stop (notch) filter
-cfg.bsfreq = [49.9 50.1 ; 99.9 100.1 ; 149.9 150.1];
 cfg.bsfiltord = 2;
-data = ft_preprocessing(cfg, data); % applies parms 
-
+%%
+data = ft_preprocessing(cfg, data); % applies parms
+whos("data")
+beep
+%%
 % if the movie was paused during a run, the pause start and end are indicated with
 % triggers 251 and 252, respectively. This data segment should be
 % removed from further analyses, which we do here. Same for catch trials,
@@ -139,7 +150,7 @@ if any(extractfield(currentevents,'value') == 251)
 end
 
 % and the catch trials (picking the timepts of the catch trials for later cutting)
-occstartID = find(extractfield(currentevents,'value') == 241); 
+occstartID = find(extractfield(currentevents,'value') == 241);
 occendID = find(extractfield(currentevents,'value') == 242);
 
 % loop over breaks if multiple

@@ -1,25 +1,27 @@
-function Project1917_preproc2_cleaning(parms)
+addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
+ft_defaults
+preproc_dir = '/Volumes/TIZIANO/data_preproc';
+subjects = 9:10;
+target_runs = 1:6;
+for isub = subjects
+    tProject1917_preproc2_cleaning(preproc_dir, isub, target_runs)
+end % for isub = subjects
+
+% function
+function tProject1917_preproc2_cleaning(preproc_dir, isub, target_runs)
+
 % Project 1917
 % preprocessing script 1 - bad channel and segment detection
 
 % loop over subjects
-for isub = parms.subjects
-
-    % set paths
-    rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
-    datadir = sprintf('%s%sdata%ssub-%03d',rootdir,filesep,filesep,isub);
-    indir = sprintf('%s%spreprocessing',datadir,filesep);
-
+    % set paths 
     % start up Fieldtrip
-    addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
-    ft_defaults
-
+    preproc_dir = sprintf('%s%ssub-%03d',preproc_dir,filesep,isub);
+    indir = sprintf('%s%spreprocessing',preproc_dir,filesep);
     % loop over runs
-    for irun = parms.runs
-
+    for irun = target_runs
         fn2load = sprintf('%s%sdata_reref_filt_trim_sub%03d_run%02d',indir,filesep,isub,irun);
         load(fn2load,'data');
-
         % filter for segment outliers in the frequency range we're interested
         % in for now (i.e., max beta, or below 50)
         cfg = [];
@@ -39,17 +41,15 @@ for isub = parms.subjects
         cfg.method = 'summary';
         cfg.layout = 'CTF275.lay';
         cfg.keeptrial   = 'yes';
+        beep
         data_segmented = ft_rejectvisual(cfg, data_segmented); % automatic artifact rejection
-
         % store which channels to keep
         megchan_keep = data_segmented.label; % only the channels that were not rejected from rejectvisual (?)
         fn2save = sprintf('%s%sbadchan_sub%03d_run%02d',indir,filesep,isub,irun);
         save(fn2save, 'megchan_keep'); % outputs both channels and segments and then select bad channels
-
         % extract bad segments from first test
         BAD_lowfreq = data_segmented.cfg.artfctdef.summary.artifact-data_segmented.sampleinfo(1,1)+1;
         clear data_segmented
-
         % filter for muscle activity, cut into 500 msec segments, and run ft_rejecvisual summary again
         cfg = [];
         cfg.bpfilter = 'yes';
@@ -58,9 +58,7 @@ for isub = parms.subjects
         cfg.bpfiltord = 4;
         cfg.hilbert = 'yes';
         cfg.channel = megchan_keep;
-
-        data_filt = ft_preprocessing(cfg, data); 
-
+        data_filt = ft_preprocessing(cfg, data);
         % segment continuous data into 500 msec 'fake trials'
         cfg                      = [];
         cfg.length               = .5;
@@ -73,20 +71,16 @@ for isub = parms.subjects
         cfg.layout = 'CTF275.lay';
         cfg.keepchannel = 'yes';
         cfg.keeptrial   = 'yes';
+        beep
         data_segmented = ft_rejectvisual(cfg, data_segmented); % again rejectvisual after the bandpass 110-140
-
         % extract bad segments
         BAD_muscle = data_segmented.cfg.artfctdef.summary.artifact-data_segmented.sampleinfo(1,1)+1;
         clear data_segmented
-
         % convert from indices to time to prevent mistakes later on when
         % removing bad segments on downsampled data
         BAD_lowfreq = data.time{1}(BAD_lowfreq);
         BAD_muscle = data.time{1}(BAD_muscle);
-
         fn2save = sprintf('%s%sbadseg_sub%03d_run%02d',indir,filesep,isub,irun);
         save(fn2save,'BAD_lowfreq','BAD_muscle');
-
-    end% run loop
-
-end% subject loop
+    end
+end % EOF
