@@ -1,25 +1,44 @@
-function Project1917_preproc5_4TizianoSISSA(parms,isub,iroi)
+addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
+ft_defaults
+preproc_dir = '/Volumes/TIZIANO/data_preproc';
+
+parms = [];
+parms.cluster = 0;
+parms.subjects = 3;
+parms.ROIs = 1;% 1 = all sensors, 2 = occipito-parietal sensors
+parms.fsNew = 50;% sampling frequency to downsample to neural data to
+parms.neuralSmoothing = 23;% smoothing in samples, because that's what ft_preproc_smooth uses, should be odd number of samples
+parms.MNN = 0; % Multivariate Noise Normalization: 0 = no MNN, 1 = MNN using trials as observations, 2 = MNN using time as observations
+parms.rej_bad_muscle = 0;% 0 to keep bad muscle segments in, 1 to reject them
+parms.rej_bad_lowfreq = 1;% 0 to keep low-freq noise segments in, 1 to reject them
+parms.bad_seg_interp = 1;% 0 to replace bad segments with NaNs and ignore in final analysis, 1 to interpolate
+parms.rej_bad_comp = 2;% 1 to remove all bad components, 2 to keep eye-movement components in
+
+isub = 4;
+iroi = 1;
+Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
+
+function Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
+addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
+ft_defaults
 % Project 1917
 % preprocessing script 4 - ROI selection, dealing with bad channels and bad segments, optionally multivariate noise normalization (MNN), combining runs
-
-if parms.cluster == 1
-    % set paths
-    rootdir = '//mnt/storage/tier2/morwur/Projects/INGMAR/Project1917';
-    % start up Fieldtrip
-    addpath('//mnt/storage/tier2/morwur/Projects/INGMAR/toolboxes/fieldtrip-20231220');
-else
-    % set paths
-    rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
-    % start up Fieldtrip
-    addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
-end
-
-% set Fieldtrip defaults
-ft_defaults
+% 
+% if parms.cluster == 1
+%     % set paths
+%     rootdir = '//mnt/storage/tier2/morwur/Projects/INGMAR/Project1917';
+%     % start up Fieldtrip
+%     addpath('//mnt/storage/tier2/morwur/Projects/INGMAR/toolboxes/fieldtrip-20231220');
+% else
+%     % set paths
+%     rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
+%     % start up Fieldtrip
+%     addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
+% end
 
 % prepare layout
 cfg = [];
-cfg.layout = 'CTF275.lay';
+cfg.layout = '/Users/tizianocausin/Desktop/programs/fieldtrip-20240110/template/layout/CTF275.lay'; %added the full path otherwise it wasn't working
 layout = ft_prepare_layout(cfg);
 layout = layout.label;
 
@@ -29,8 +48,8 @@ cfg.method = 'template';
 cfg.template = 'CTF275_neighb.mat';
 neighbours = ft_prepare_neighbours(cfg);
 
-indir = sprintf('%s%sdata%ssub-%03d%spreprocessing',rootdir,filesep,filesep,isub,filesep);
-outdir = sprintf('%s%sdata%ssub-%03d%spreprocessed',rootdir,filesep,filesep,isub,filesep);
+indir = sprintf('%s%ssub-%03d%spreprocessing',preproc_dir,filesep,isub,filesep);
+outdir = sprintf('%s%ssub-%03d%spreprocessing',preproc_dir,filesep,isub,filesep);
 
 if ~exist(outdir,'dir')
     mkdir(outdir);
@@ -50,7 +69,7 @@ elseif iroi == 2
     ROIletter = {'O','P'};
 end
 
-%% load all runs
+% load all runs
 missingchan = cell(1,6);
 for irun = 1:6
 
@@ -120,25 +139,25 @@ for irun = 1:6
         samples2keep(badsegs(iseg,1):badsegs(iseg,2)) = false;
     end
 
-%     % find bad segments larger than 10 sec so they can be excluded from the dRSA analysis
-%     segstart = [];
-%     segend = [];
-%     for isamp = 1:length(samples2keep)-1
-%         if diff(samples2keep(isamp:isamp+1)) == -1
-%             segstart = [segstart isamp+1];
-%         elseif diff(samples2keep(isamp:isamp+1)) == 1
-%             segend = [segend isamp+1];
-%         end
-%     end
-%     largesegID = (segend-segstart)/data.fsample > 10;
-%     segstart(~largesegID) = [];
-%     segend(~largesegID) = [];
+    %     % find bad segments larger than 10 sec so they can be excluded from the dRSA analysis
+    %     segstart = [];
+    %     segend = [];
+    %     for isamp = 1:length(samples2keep)-1
+    %         if diff(samples2keep(isamp:isamp+1)) == -1
+    %             segstart = [segstart isamp+1];
+    %         elseif diff(samples2keep(isamp:isamp+1)) == 1
+    %             segend = [segend isamp+1];
+    %         end
+    %     end
+    %     largesegID = (segend-segstart)/data.fsample > 10;
+    %     segstart(~largesegID) = [];
+    %     segend(~largesegID) = [];
 
     % either replace bad segments with NaNs and ignore in final analysis, or interpolate
     if ~parms.bad_seg_interp
         data.trial{1}(:,~samples2keep) = NaN;
     elseif parms.bad_seg_interp
-        
+
         tempdata = data.trial{1};
         temptime = data.time{1};
         tempdata(:,~samples2keep) = [];
@@ -197,7 +216,7 @@ end% runs
 data = data_all;
 clear data_all
 
-%% decrease file size for storage
+% decrease file size for storage
 % I tested how much we can reduce precision by correlating the uint8 data
 % matrix with the original data matrix and the lowest correlation value
 % across all time points is is 0.997, but to be safe let's use uint16 precision,
@@ -207,9 +226,9 @@ clear data_all
 % the uint16 precision so we can reduce precision (and storage size)
 % data_final = cell(6,1);
 % for irun = 1:6
-% 
+%
 %     data_final{irun} = single(data.trial{irun});% uint16(rescale(data.trial{irun},1,2^16));
-% 
+%
 % end
 
 % and then store, with some additional info such as time, labels
@@ -218,3 +237,4 @@ fn2save = sprintf('%s%ssub%03d_%s_%dHz',...
 
 save(fn2save,'data', '-v7.3');
 
+end % EOF
