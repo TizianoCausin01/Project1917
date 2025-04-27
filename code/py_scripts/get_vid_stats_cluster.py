@@ -10,8 +10,7 @@ preprocess = transforms.Compose(
     ]
 )
 
-
-path2vid = "/Volumes/TIZIANO/stimuli/Project1917_movie_part3_24Hz.mp4"
+path2vid = "/mnt/storage/tier2/ingdev/projects/TIZIANO/stimuli/Project1917_movie_part3_24Hz.mp4"
 reader = cv2.VideoCapture(path2vid)
 tensor_list = []
 while True:
