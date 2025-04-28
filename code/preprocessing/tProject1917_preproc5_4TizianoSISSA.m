@@ -5,7 +5,7 @@ preproc_dir = '/Volumes/TIZIANO/data_preproc';
 parms = [];
 parms.cluster = 0;
 parms.subjects = 3;
-parms.ROIs = 1;% 1 = all sensors, 2 = occipito-parietal sensors
+parms.ROIs = 2;% 1 = all sensors, 2 = occipito-parietal sensors
 parms.fsNew = 50;% sampling frequency to downsample to neural data to
 parms.neuralSmoothing = 23;% smoothing in samples, because that's what ft_preproc_smooth uses, should be odd number of samples
 parms.MNN = 0; % Multivariate Noise Normalization: 0 = no MNN, 1 = MNN using trials as observations, 2 = MNN using time as observations
@@ -14,16 +14,17 @@ parms.rej_bad_lowfreq = 1;% 0 to keep low-freq noise segments in, 1 to reject th
 parms.bad_seg_interp = 1;% 0 to replace bad segments with NaNs and ignore in final analysis, 1 to interpolate
 parms.rej_bad_comp = 2;% 1 to remove all bad components, 2 to keep eye-movement components in
 
-isub = 4;
-iroi = 1;
-Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
-
+subjects = 3:4;
+rois = 3:6;
+for isub=subjects
+    for iroi=rois
+        Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
+    end %for iroi=rois
+end % for isub=subjects
 function Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
-addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
-ft_defaults
 % Project 1917
 % preprocessing script 4 - ROI selection, dealing with bad channels and bad segments, optionally multivariate noise normalization (MNN), combining runs
-% 
+%
 % if parms.cluster == 1
 %     % set paths
 %     rootdir = '//mnt/storage/tier2/morwur/Projects/INGMAR/Project1917';
@@ -47,8 +48,7 @@ cfg = [];
 cfg.method = 'template';
 cfg.template = 'CTF275_neighb.mat';
 neighbours = ft_prepare_neighbours(cfg);
-
-indir = sprintf('%s%ssub-%03d%spreprocessing',preproc_dir,filesep,isub,filesep);
+indir = sprintf('%s%ssub-%03d%spreprocessing',preproc_dir,filesep,isub, filesep);
 outdir = sprintf('%s%ssub-%03d%spreprocessing',preproc_dir,filesep,isub,filesep);
 
 if ~exist(outdir,'dir')
@@ -67,6 +67,18 @@ if iroi == 1
 elseif iroi == 2
     ROIname = {'occpar'};
     ROIletter = {'O','P'};
+elseif iroi == 3
+    ROIname = {'occ'};
+    ROIletter = {'O'};
+elseif iroi == 4
+    ROIname = {'par'};
+    ROIletter = {'P'};
+elseif iroi == 5
+    ROIname = {'tem'};
+    ROIletter = {'T'};
+elseif iroi == 6
+    ROIname = {'fro'};
+    ROIletter = {'F'};
 end
 
 % load all runs
