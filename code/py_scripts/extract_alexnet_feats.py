@@ -4,11 +4,12 @@
 import torch
 import cv2
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 from torchvision import models
+#import imageio
 import numpy as np
 import h5py
-
+print("inside")
+#alexnet = models.alexnet(pretrained=True).eval()
 alexnet = models.alexnet(weights=True).eval()
 preprocess = transforms.Compose(
     [
@@ -21,9 +22,7 @@ preprocess = transforms.Compose(
     ]
 )
 
-path2vid = "/Volumes/TIZIANO/stimuli/Project1917_movie_part3_24Hz.mp4"
-reader = cv2.VideoCapture(path2vid)
-
+#reader = imageio.get_reader(path2vid)
 conv_layers = [
     "conv_layer1",
     "conv_layer4",
@@ -78,37 +77,40 @@ for fc_idx in range(len(fc_layers_idx)):
         )
     )
 
+for irun in range(3):
+    print("irun:", irun)
+    path2vid = "/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/stimuli/Project1917_movie_part{irun+1}_24Hz.mp4"
+    reader = cv2.VideoCapture(path2vid)
+    feats = {
+        "conv_layer1": [],
+        "conv_layer4": [],
+        "conv_layer7": [],
+        "conv_layer9": [],
+        "conv_layer11": [],
+        "fc_layer2": [],
+        "fc_layer5": [],
+    }
+    count = 0
+    while True:
+        count += 1
+        ret, frame = reader.read()
+        if ret == False:
+            break
+        # end if ret==False:
 
-feats = {
-    "conv_layer1": [],
-    "conv_layer4": [],
-    "conv_layer7": [],
-    "conv_layer9": [],
-    "conv_layer11": [],
-    "fc_layer2": [],
-    "fc_layer5": [],
-}
-# while True:
-for i in range(2):
-    ret, frame = reader.read()
-    if ret == False:
-        break
-    # end if ret==False:
+        frame_rgb = cv2.cvtColor(
+            frame, cv2.COLOR_BGR2RGB
+        )  # converts to bgr to rgb color codes
+        input_tensor = preprocess(frame_rgb).unsqueeze(
+            0
+        )  # unsqueeze adds the batch size in front of the img
+        with torch.no_grad():
+            alexnet(input_tensor)
+        # end for i in range(1):
 
-    frame_rgb = cv2.cvtColor(
-        frame, cv2.COLOR_BGR2RGB
-    )  # converts to bgr to rgb color codes
-    input_tensor = preprocess(frame_rgb).unsqueeze(
-        0
-    )  # unsqueeze adds the batch size in front of the img
-    with torch.no_grad():
-        alexnet(input_tensor)
-# end for i in range(1):
-# %%
-irun = 5
-path2mod = "/Volumes/TIZIANO/models"
-with h5py.File(f"{path2mod}/Project1917_alexnet_run0{irun}.h5", "w") as f:
+    path2mod = "/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/models"
+    with h5py.File(f"{path2mod}/Project1917_alexnet_run0{irun+1}.h5", "w") as f:
     # Iterate over dictionary items and save them in the HDF5 file
-    for key, value in feats.items():
-        f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
-# %%
+        for key, value in feats.items():
+            f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
+
