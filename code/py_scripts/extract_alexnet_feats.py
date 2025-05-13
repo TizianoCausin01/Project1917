@@ -25,15 +25,16 @@ path2vid = "/Volumes/TIZIANO/stimuli/Project1917_movie_part3_24Hz.mp4"
 reader = cv2.VideoCapture(path2vid)
 
 conv_layers = [
-    "conv_layer1",
-    "conv_layer4",
-    "conv_layer7",
-    "conv_layer9",
-    "conv_layer11",
+    "real_conv_layer1",
+    "real_conv_layer4",
+    "real_conv_layer7",
+    "real_conv_layer9",
+    "real_conv_layer11",
 ]
-conv_layers_idx = [1, 4, 7, 9, 11]
-fc_layers = ["fc_layer2", "fc_layer5"]
-fc_layers_idx = [2, 5]
+conv_layers_idx = [0, 3, 6, 8, 10]
+
+fc_layers = ["real_fc_layer2", "real_fc_layer5"]
+fc_layers_idx = [1, 4]
 # %%
 output_len_conv = [193600, 139968, 64896, 43264, 43264]
 rand_idx_conv = []
@@ -80,13 +81,13 @@ for fc_idx in range(len(fc_layers_idx)):
 
 
 feats = {
-    "conv_layer1": [],
-    "conv_layer4": [],
-    "conv_layer7": [],
-    "conv_layer9": [],
-    "conv_layer11": [],
-    "fc_layer2": [],
-    "fc_layer5": [],
+    "real_conv_layer1": [],
+    "real_conv_layer4": [],
+    "real_conv_layer7": [],
+    "real_conv_layer9": [],
+    "real_conv_layer11": [],
+    "real_fc_layer2": [],
+    "real_fc_layer5": [],
 }
 # while True:
 for i in range(2):
@@ -107,7 +108,7 @@ for i in range(2):
 # %%
 irun = 5
 path2mod = "/Volumes/TIZIANO/models"
-with h5py.File(f"{path2mod}/Project1917_alexnet_run0{irun}.h5", "w") as f:
+with h5py.File(f"{path2mod}/Project1917_real_alexnet_run0{irun}.h5", "w") as f:
     # Iterate over dictionary items and save them in the HDF5 file
     for key, value in feats.items():
         f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
