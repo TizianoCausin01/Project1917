@@ -3,14 +3,14 @@
 # %%
 import torch
 import cv2
+import sys
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
 from torchvision import models
 from torchvision.models import ResNet18_Weights
 import numpy as np
 import h5py
 
-resnet18 = models.resnet18(weights=True).eval()
+resnet18 = models.resnet18(weights=ResNet18_Weights.IMAGENET1K_V1).eval()
 preprocess = transforms.Compose(
     [
         transforms.ToPILImage(),
@@ -23,8 +23,6 @@ preprocess = transforms.Compose(
 )
 weights = ResNet18_Weights.DEFAULT
 categories = weights.meta["categories"]
-path2vid = "/Volumes/TIZIANO/stimuli/Project1917_movie_part3_24Hz.mp4"
-reader = cv2.VideoCapture(path2vid)
 layers = ["layer1", "layer2", "layer3", "layer4", "fc"]
 output_len = [200704, 100352, 50176, 25088]
 rand_idx = []
@@ -64,28 +62,34 @@ for idx in layers:
         )
         count += 1
 
-
-feats = {"layer1": [], "layer2": [], "layer3": [], "layer4": [], "fc": []}
-
-for i in range(2):
-    ret, frame = reader.read()
-    if ret == False:
-        break
-    # end if ret==False:
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame = preprocess(frame).unsqueeze(0)
-    print("\nNEW FRAME")
-    with torch.no_grad():
-        out = resnet18(frame)
-        top5 = torch.topk(out, 5)
-        for idx in top5.indices[0]:
-            print(categories[idx.item()])
-# end for i in range(1):
-# %%
-irun = 5
-path2mod = "/Volumes/TIZIANO/models"
-with h5py.File(f"{path2mod}/Project1917_resnet18_run0{irun}.h5", "w") as f:
+path2mod = "/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/models"
+runs = [1,2,3]
+for irun in runs:
+    feats = {"layer1": [], "layer2": [], "layer3": [], "layer4": [], "fc": []}
+    print("irun:", irun)
+    path2vid = f"/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/stimuli/Project1917_movie_part{irun}_24Hz.mp4"
+    print("path2vid",path2vid)
+    sys.stdout.flush()
+    reader = cv2.VideoCapture(path2vid)
+    count = 0
+    while True:
+        ret, frame = reader.read()
+        if ret == False:
+            break
+        # end if ret==False:
+        count+=1
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = preprocess(frame).unsqueeze(0)
+        print(f"\n FRAME{count}")
+        with torch.no_grad():
+            out = resnet18(frame)
+            top5 = torch.topk(out, 5)
+            for idx in top5.indices[0]:
+                print(categories[idx.item()])
+    # while True:
+    with h5py.File(f"{path2mod}/Project1917_resnet18_run0{irun}.h5", "w") as f:
     # Iterate over dictionary items and save them in the HDF5 file
-    for key, value in feats.items():
-        f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
+        for key, value in feats.items():
+            f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
+    # for irun in runs
 # %%
