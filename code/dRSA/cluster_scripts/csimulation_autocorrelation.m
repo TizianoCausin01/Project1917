@@ -1,13 +1,10 @@
 close all; clearvars; clc
 
-numCores = 12; % to run in parallel the 6 rois
-parpool('local',numCores)
 addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
 ft_defaults
-
 parms.modelnames = {"alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5", "resnet18_layer1", "resnet18_layer2", "resnet18_layer3", "resnet18_layer4", "resnet18_fc"}
 parms.metric = 'corr';
-models_directory = "/mnt/storage/tier2/ingdev/projects/TIZIANO/models";
+models_directory = "/mnt/storage/tier2/ingdev/projects/TIZIANO/models/";
 %models_directory = "/Volumes/TIZIANO/models/";
 simulation_output_directory = "/mnt/storage/tier2/ingdev/projects/TIZIANO/results/simulations/";
 %simulation_output_directory = "/Volumes/TIZIANO/results/simulations/";
@@ -19,8 +16,8 @@ parms.minISI = 1;% minimum inter-stimulus-interval in seconds; 0 means pseudo-st
 parms.maxlatency = 5;% max latency to test with dRSA latency plots in sec
 
 
-parfor imod_num = 1 : size(model_names,2)
-    imod = model_names{imod_num};
+for imod_num = 1 : size(parms.modelnames,2)
+    imod = parms.modelnames{imod_num};
     for irun = 1 : 3
         fn2load = sprintf('%sProject1917_%s_run%02d_movie24Hz.mat' , models_directory,imod,irun);
         load(fn2load);
@@ -35,7 +32,7 @@ parfor imod_num = 1 : size(model_names,2)
 end
 
 
-%% it should work for all the models
+% it should work for all the models
 % gets the models name and the parms and the dataDir and returns a
 % results.mat for each subject in the form of dRSA_sub{3dnumber}_{model_name}_rep{irep}_{freq_of_analysis}Hz.mat in the results folder
 function simulation_autocorrelation(dataMOD, output_directory, imod, parms)
@@ -52,7 +49,7 @@ function simulation_autocorrelation(dataMOD, output_directory, imod, parms)
 %   .stimlen, .fsNew, .iterations, .nstim, .minISI, .maxlatency,
 
 
-%% input and output folders
+% input and output folders
 
 if parms.fsNew == 50
     freq = 50;
@@ -61,7 +58,7 @@ else
 end
 fn2save = sprintf('%s%csimulation_%s_%dHz.mat', output_directory, filesep,imod,freq);
 
-%% load eye-tracker and model data
+% load eye-tracker and model data
 % eye-tracker data data
 %stores the size of the runs of the model to chop out supplementary data
 for i=1:size(dataMOD,2)
@@ -82,7 +79,7 @@ part2endID = size(data_final{1},2)+size(data_final{2},2);
 clear data_final
 % remember last sample of second movie part for later mask
 
-%% create indices for random subsampling of cfg.nstim pseudo-stimuli over cfg.iterations iterations
+% create indices for random subsampling of cfg.nstim pseudo-stimuli over cfg.iterations iterations
 % make sure rand numbers are different for each subject, and each time this script is ran at a different time and date
 rng(second(datetime('now'))*10^4);
 framenumtot = size(dataEYE,2);
@@ -153,7 +150,7 @@ if ~isfield(parms,'cluster')
     clear selectedIDs
 end
 
-%% compute dRSA across iterations
+% compute dRSA across iterations
 % set some parameters
 framenum = parms.stimlen*parms.fsNew; %num of frames in each segment, corresponds to 10 sec
 tRange=parms.maxlatency*parms.fsNew;% in samples
@@ -163,8 +160,8 @@ pseudotime = 0:1/parms.fsNew:framenum/parms.fsNew-1/parms.fsNew;
 dRSAlatency = zeros(parms.iterations,length(latencytime),'single');
 for iter = 1:parms.iterations
 
-    clc;
     disp(['Running dRSA iteration ' num2str(iter) ' of ' num2str(parms.iterations) imod]);
+    drawnow
 
     % loop over frames of pseudo-stimuli and compute RDM at each frame
     gazeRDM = zeros(parms.nstim,parms.nstim,round(framenum),'single'); %changed ingmar
@@ -178,7 +175,7 @@ for iter = 1:parms.iterations
         dataMODiter = single(dataMOD(:,frameIDs));
 
         % compute RDM for current frame
-        gazeRDM(:,:,iframe) = dist(dataGAZEiter); %!! computes the euclidean distance
+        gazeRDM(:,:,iframe) = 1 - corr(dataGAZEiter); 
         % depending on whether I'm using a saliency map or a gaze simulation
         if parms.metric == 'corr'
             modelRDM(:,:,iframe) = 1 - corr(dataMODiter);
