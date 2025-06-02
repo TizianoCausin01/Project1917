@@ -2,8 +2,7 @@ close all; clearvars; clc
 
 addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
 ft_defaults
-% parms.modelnames = {"alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5", "resnet18_layer1", "resnet18_layer2", "resnet18_layer3", "resnet18_layer4", "resnet18_fc"}
-parms.modelnames = {"real_alexnet_real_conv_layer1", "real_alexnet_real_conv_layer4", "real_alexnet_real_conv_layer7", "real_alexnet_real_conv_layer9", "real_alexnet_real_conv_layer11", "real_alexnet_real_fc_layer2", "real_alexnet_real_fc_layer5"};
+parms.modelnames = {"alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5", "resnet18_layer1", "resnet18_layer2", "resnet18_layer3", "resnet18_layer4", "resnet18_fc"}
 parms.metric = 'corr';
 models_directory = "/mnt/storage/tier2/ingdev/projects/TIZIANO/models/";
 %models_directory = "/Volumes/TIZIANO/models/";

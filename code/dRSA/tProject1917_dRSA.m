@@ -1,14 +1,12 @@
 close all; clearvars; clc
-
-numCores = 6; % to run in parallel the 6 rois
+numCores = 3; % to run in parallel the 6 runs
 parpool('local',numCores)
-addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
-ft_defaults
+addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
 % set directories
 % rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
-preproc_dir = '/mnt/storage/tier2/ingdev/projects/TIZIANO/data_preproc';
-models_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/models";
-results_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/results";
+preproc_dir = '/Volumes/TIZIANO/data_preproc';
+models_dir = "/Volumes/TIZIANO/models"; 
+results_dir = "/Volumes/TIZIANO/results";
 % addpath(genpath(rootdir));
 % codeDir='/Users/tizianocausin/Desktop/backUp20240609/summer2024/dondersInternship/code'; %!!CHANGED TO ADD THE PATH TO THE CODE WHICH IS SEPARATE FROM THE DATA REP
 % addpath(genpath(codeDir))
@@ -17,12 +15,12 @@ results_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/results";
 parms = [];
 parms.fsNew = 50;% here match the chosen neural sampling rate
 % parms.subjects = 3:15;
-parms.subjects =3:10 ;
+parms.subjects = 3:4; %!!CHANGED BC I ONLY HAVE SUB03
 parms.repetitions = 1:2;
 parms.ROInames = {'allsens', 'occpar','occ', 'par', 'tem', 'fro'};
-parms.ROI = 1;% 1 = all MEG sensors, 2 = occipito-parietal
-%parms.modelnames = {"OFdir", "dg_map", "dg_map_KLD","alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5", "gbvs_map", "gbvs_map_KLD", "pixelwise","OFmag"}
-parms.modelnames = {"resnet18_layer1", "resnet18_layer2", "resnet18_layer3", "resnet18_layer4", "resnet18_fc"}
+parms.ROI = 1:6;% 1 = all MEG sensors, 2 = occipito-parietal
+parms.modelnames = {'pixelwise'} %,'OFmag','OFdir'};
+parms.models2test = 1:3;% 
 parms.OFtempres = 24;% whether to use OF models computed on 12 Hz downsampled or 24 Hz original movie data, or on both
 parms.gazedep = 0;% whether to use  gaze-invariant models (0), or gaze-dependent models (1) or both
 
@@ -35,39 +33,50 @@ parms.rej_bad_comp = 2;% 1 to remove all bad components, 2 to keep eye-movement 
 
 % dRSA parameters
 parms.MNN = 0;
-parms.smoothNeuralRDM = 5;% Smoothing of neural RDM in samples. Has to be odd number, because includes centre point!
+parms.smoothNeuralRDM = 5;% Smoothing of neural RDM in samples. Has to be odd number, because includes centre point!  
 parms.smoothModelRDM = 5;% same for model RDM
 parms.similarity = 0;% 0 = correlation, 1 = principal component regression
 parms.nPCRcomps = 75;% in case of pcr, maximum amount of PCR components to regress out
 
 % temporal subsampling parameters
-parms.nstim = 180; % # of pseudo-stimuli to cut out of movie for each subsampling iteration
+parms.nstim = 180; % # of pseudo-stimuli to cut out of movie for each subsampling iteration 
 parms.stimlen = 10;% length of pseudo-stimuli in seconds
-parms.iterations = 100; %00;
+parms.iterations = 3; %00;
 parms.minISI = 1;% minimum inter-stimulus-interval in seconds; 0 means pseudo-stimuli can touch each other
 parms.maxlatency = 5;% max latency to test with dRSA latency plots in sec
-ires = 24; igaze=0;
+
 % cluster or locally
-%parms.cluster = 1; %!!CHANGED BC NO CLUSTER NEEDED
-for isub=parms.subjects
-    for irep=parms.repetitions
-        for imod=1:length(parms.modelnames)
-            parfor iroi=1:6
-                roi_name = parms.ROInames{iroi}
-                Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze, roi_name)
-            end % parfor iroi = 1:6
-        end %for imod=1:length(parms.modelnames)
-    end %for irep=parms.repetitions
-end %for isub=parms.subjects
-function Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze, roi_name)
+%parms.cluster = 1; %!!CHANGED BC NO CLUSTER NEEDED 
+isub = 4; irep = 1; imod = 1; iroi = 1; ires = 24; igaze = 0;
+parfor iroi = 1:6
+    Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze)
+end % parfor iroi = 1:6
+
+function Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze)
 if ires == 12 && imod == 1% 12Hz models don't exist for pixelwise
     return
 end
 
+% if isfield(parms,'cluster')
+%     % set paths
+%     rootdir = '//mnt/storage/tier2/morwur/Projects/INGMAR/Project1917';
+%     % start up Fieldtrip
+%     addpath('//mnt/storage/tier2/morwur/Projects/INGMAR/toolboxes/fieldtrip-20231220');
+%     warning('off')% we don't see warnings on the cluster anyway and might take extra time to print
+% else
+%     % set paths
+%     rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
+%     % start up Fieldtrip
+%     addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
+% end
+
+% start up Fieldtrip
+%ft_defaults
+
 % input and output folders
 indirMEG = sprintf('%s%ssub-%03d%spreprocessing', preproc_dir,filesep,isub,filesep);
 if igaze == 1% gaze-dependent models
-    indirMOD = sprintf('%s%ssub-%03d%smodels',models_dir,filesep,isub,filesep);
+    indirMOD = sprintf('%s%ssub-%03d%smodels',models_dir,filesep,isub,filesep);    
 else% gaze-invariant models
     % indirMOD = sprintf('%s%smodels',models_dir,filesep);
     indirMOD = models_dir;
@@ -79,11 +88,14 @@ elseif parms.similarity == 1
     simstring = ['pcr_' num2str(parms.nPCRcomps) 'comps'];
 end
 
-outdir = sprintf('%s%s%s%s%dHz_%dstim_%dsec_%diter_%dMNN%ssub%03d',results_dir,filesep,simstring,filesep,parms.fsNew,parms.nstim,parms.stimlen,parms.iterations,parms.MNN,filesep,isub);
+outdir = sprintf('%s%sdRSA%s%s%s%dHz_%dstim_%dsec_%diter_%dMNN%ssub%03d',...
+    results_dir,filesep,filesep,simstring,filesep,parms.fsNew,parms.nstim,parms.stimlen,parms.iterations,parms.MNN,filesep,isub)
 if ~exist(outdir,'dir')
     mkdir(outdir);
 end
 
+% fn2save = sprintf('%s%cdRSA_%s_%s_%dHz_rep%d_gazedep%d_gazerad%d',
+% outdir, filesep, parms.ROInames{iroi}, parms.modelnames{imod}, ires, irep, igaze, parms.gazeradius);
 %!!CHANGED not sure what it does
 
 % load MEG and model data
@@ -91,12 +103,11 @@ end
 % fn2load = sprintf('%s%ssub%03d_%s_%dHz_MNN%d_badmuscle%d_badlowfreq%d_badsegint%d_badcomp%d',...
 %     indirMEG,filesep,isub,parms.ROInames{iroi},parms.fsNew,parms.MNN,parms.rej_bad_muscle,parms.rej_bad_lowfreq,parms.bad_seg_interp,parms.rej_bad_comp);
 fn2load = sprintf('%s%ssub%03d_%s_%dHz.',...
-    indirMEG,filesep,isub,parms.ROInames{iroi},parms.fsNew);
+     indirMEG,filesep,isub,parms.ROInames{iroi},parms.fsNew);
 
-% load(fn2load,'data_final'); #FIXME for rep1_2 load both repetitions and
-% preproc both
+% load(fn2load,'data_final');
 load(fn2load)
-data_final = data.trial; % my preproc5 didn't have data_final, so I am doing it now
+data_final = data.trial % my preproc5 didn't have data_final, so I am doing it now
 % select current repetition
 runIDs = 3*irep-2:3*irep;
 data_final = data_final(runIDs);
@@ -113,51 +124,35 @@ badchan = logical(sum(badchan));
 vecrep_all = cell(length(runIDs),1);
 count = 0;
 for irun = runIDs
-    if ~strcmp(imod, "rep1_2")
-        count = count + 1;
-        if igaze == 1% gaze dependent models
-            fn2load = sprintf('%s%sProject1917_%s_sub%03d_run%02d_movie%dHz_gazerad%d',indirMOD,filesep,parms.modelnames{imod},isub,irun,ires,parms.gazeradius);
-        else% gaze invariant models
-            fn2load = sprintf('%s%sProject1917_%s_run%02d_movie%dHz',indirMOD,filesep,parms.modelnames{imod},count,ires);
-        end
-        load(fn2load,'vecrep','fsVid','tVid');
-
-        % resample to new sampling rate in parms.fsNew, only 'nearest' makes sense for movie frames
-        tNew = 0:1/parms.fsNew:size(vecrep,2)/fsVid-1/parms.fsNew;
-
-        % for each new time point, find index of nearest old time point
-        old2newID = dsearchn(tVid',tNew');
-        vecrep = vecrep(:,old2newID,:);
-
-        % cut MEG data at end because we stored 1 sec after the trigger signaling the end of the movie
-        data_final{count}(:,size(vecrep,2)+1:end) = [];
-
-        vecrep_all{count} = vecrep;
-        clear vecrep
-    elseif strcmp(imod, "rep1_2") % comparison rep 1 vs rep 2
-        if irep ==1
-            error("When you do rep 1 vs rep 2 you can't select rep 1")
-        end
-        count = count + 1;
-        fn2OFdir = sprintf('%s%sProject1917_OFdir_run%02d_movie%dHz',indirMOD,filesep,count,ires);
-        load(fn2OFdir,'tVid');
-
-        % resample to new sampling rate in parms.fsNew, only 'nearest' makes sense for movie frames
-        tNew = 0:1/parms.fsNew:size(vecrep,2)/fsVid-1/parms.fsNew;
-
-        % for each new time point, find index of nearest old time point
-        old2newID = dsearchn(tVid',tNew');
-        vecrep = vecrep(:,old2newID,:);
-
-        % cut MEG data at end because we stored 1 sec after the trigger signaling the end of the movie
-        data_final{count}(:,size(vecrep,2)+1:end) = [];
-
-        vecrep_all{count} = vecrep;
-        clear vecrep
+    count = count + 1;
+    if igaze == 1% gaze dependent models
+        fn2load = sprintf('%s%sProject1917_%s_sub%03d_run%02d_movie%dHz_gazerad%d',indirMOD,filesep,parms.modelnames{imod},isub,irun,ires,parms.gazeradius);
+    else% gaze invariant models
+        fn2load = sprintf('%s%sProject1917_%s_run%02d_movie%dHz',indirMOD,filesep,parms.modelnames{imod},count,ires);      
     end
+    load(fn2load,'vecrep','fsVid','tVid');
+
+    % resample to new sampling rate in parms.fsNew, only 'nearest' makes sense for movie frames
+    tNew = 0:1/parms.fsNew:size(vecrep,2)/fsVid-1/parms.fsNew;
+
+    % for each new time point, find index of nearest old time point
+    old2newID = dsearchn(tVid',tNew');
+    vecrep = vecrep(:,old2newID,:);
+
+    % cut MEG data at end because we stored 1 sec after the trigger signaling the end of the movie
+    data_final{count}(:,size(vecrep,2)+1:end) = [];
+
+    vecrep_all{count} = vecrep;
+    clear vecrep
 end
 
 % There is still ~3 sec overlap remaining between first and second movie part, but exact sample number might be slightly different due to several resampling steps
+% Here we check what the remaining overlap is, store this, and remove it from the start of the second movie part
+% [matchCORR,matchID] = sort(corr(single(vecrep_all{1}(:,end)),single(vecrep_all{2}(:,1:4*parms.fsNew))),'descend');
+% % in case of several with the same max correlation, pick the last one
+% maxmatch = max(matchID(matchCORR == matchCORR(1)));
+% matchCORR = matchCORR(matchID == maxmatch);
+% matchID = matchID(matchID == maxmatch);
 matchID = 152;% just set to 152 because determined with view-invariant pixelwise model, which should then hold for all
 
 % now cut the overlap
@@ -248,22 +243,22 @@ for iter = 1:parms.iterations
 end
 
 % quick whether our mask is correct, and our onsetIDs don't overlap with the mask
-if ~isfield(parms,'cluster')
-    selectedIDs = zeros(parms.iterations,framenumtot);
-    for iter = 1:parms.iterations
-        for istim = 1:parms.nstim
-            selectedIDs(iter,onsetIDiter(iter,istim):onsetIDiter(iter,istim)+parms.stimlen*parms.fsNew-1) = 1;
-        end
-    end
-    figure;
-    subplot(2,1,1);
-    imagesc(repmat(mask,parms.iterations,1));
-    title('mask');
-    subplot(2,1,2);
-    imagesc(selectedIDs)
-    title('pseudo-stimuli')
-    clear selectedIDs
-end
+% if ~isfield(parms,'cluster')
+%     selectedIDs = zeros(parms.iterations,framenumtot);
+%     for iter = 1:parms.iterations
+%         for istim = 1:parms.nstim
+%             selectedIDs(iter,onsetIDiter(iter,istim):onsetIDiter(iter,istim)+parms.stimlen*parms.fsNew-1) = 1;
+%         end
+%     end
+%     figure;
+%     subplot(2,1,1);
+%     imagesc(repmat(mask,parms.iterations,1));
+%     title('mask');
+%     subplot(2,1,2);
+%     imagesc(selectedIDs)
+%     title('pseudo-stimuli')
+%     clear selectedIDs
+% end
 
 % compute dRSA across iterations
 % set some parameters
@@ -273,7 +268,7 @@ latencytime = -parms.maxlatency:1/parms.fsNew:parms.maxlatency;
 pseudotime = 0:1/parms.fsNew:framenum/parms.fsNew-1/parms.fsNew;
 
 dRSAlatency = zeros(parms.iterations,length(latencytime),'single');
-for iter = 1:parms.iterations
+parfor iter = 1:parms.iterations
 
     clc;
     disp(['Running dRSA iteration ' num2str(iter) ' of ' num2str(parms.iterations)]);
@@ -315,6 +310,14 @@ for iter = 1:parms.iterations
         modelRDMvec = ft_preproc_smooth(modelRDMvec,parms.smoothModelRDM);
     end
 
+    %     % scale once across all time points to keep temporal structure intact
+    %     neuralRDMvec = reshape(rescale(reshape(neuralRDMvec,size(neuralRDMvec,1)*size(neuralRDMvec,2),1),0,2),size(neuralRDMvec,1),size(neuralRDMvec,2));
+    %     modelRDMvec = reshape(rescale(reshape(modelRDMvec,size(modelRDMvec,1)*size(modelRDMvec,2),1),0,2),size(modelRDMvec,1),size(modelRDMvec,2));
+    %
+    %     % neuralRDM is already rescaled above across the whole time range, but it still needs to be centered per individual time point for e.g., PCA
+    %     neuralRDMvec = neuralRDMvec - repmat(nanmean(neuralRDMvec),size(neuralRDMvec,1),1);
+    %     modelRDMvec = modelRDMvec - repmat(nanmean(modelRDMvec),size(modelRDMvec,1),1);
+
     % run dRSA
     if parms.similarity == 0% simple correlation
 
@@ -344,10 +347,8 @@ end
 
 % average over iterations
 dRSA = squeeze(mean(dRSAlatency));
-fn2save = sprintf("%s%sdRSA_%s_sub%03d_%s_%s_rep%d_%dHz.mat", outdir, filesep, simstring, isub, parms.modelnames{imod}, roi_name, irep, parms.fsNew);
+fn2save = sprintf("%s%sdRSA_%s_sub%03d_%s_rep%d_%dHz", results_dir, filesep, simstring, isub, parms.modelnames{imod}, irep, parms.fsNew)
 % save dRSA results
 save(fn2save,'dRSA','latencytime');
-disp("done:")
-disp(fn2save)
 end %EOF
 

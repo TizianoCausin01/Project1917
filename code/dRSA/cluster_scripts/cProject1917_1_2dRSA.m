@@ -18,7 +18,7 @@ results_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/results";
 % set dRSA parameters
 % general parameters
 parms = [];
-parms.fsNew = 50;% here match the chosen neural sampling rate
+parms.fsNew = 500;% here match the chosen neural sampling rate
 % parms.subjects = 3:15;
 parms.subjects =3:10 ;
 parms.repetitions = 1:2;
@@ -58,7 +58,7 @@ for isub=parms.subjects
                 Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,2,1,iroi,ires, igaze, roi_name)
             end % parfor iroi = 1:6
 end %for isub=parms.subjects
-Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,4,2,1,3,ires, igaze, "occ")
+% Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,4,2,1,3,ires, igaze, "occ")
 function Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze, roi_name)
 if ires == 12 && imod == 1% 12Hz models don't exist for pixelwise
     return
@@ -129,7 +129,7 @@ for irun = 4:6
 end % for irun = 4:6
 data_final(1:3) = [];
 % There is still ~3 sec overlap remaining between first and second movie part, but exact sample number might be slightly different due to several resampling steps
-matchID = 152;% just set to 152 because determined with view-invariant pixelwise model, which should then hold for all
+matchID = 3*parms.fsNew;% just set to 152 because determined with view-invariant pixelwise model, which should then hold for all
 
 % now cut the overlap
 vecrep_all{2}(:,1:matchID) = [];

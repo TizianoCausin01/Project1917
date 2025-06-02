@@ -2,16 +2,16 @@
 % Project 1917
 % preprocessing - ICA
 %numCores = min(8, feature('numcores'));
-numCores = 8;
+numCores = 6; % to run in parallel the 6 runs
 parpool('local',numCores)
 addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
 ft_defaults
 rootdir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/data_preproc"
-subjects = 3:10;
+subjects = 5:10;
 runs = 1:6;
-parfor isub = subjects
+for isub = subjects
     indir = sprintf('%s/sub-%03d/preprocessing',rootdir,isub);
-    for irun = 1:length(runs)
+    parfor irun = 1:length(runs)
        disp(['Processing Subject ' num2str(isub) ', Run ' num2str(irun)]);
        Project1917_preproc3_ICA(indir, isub, irun)
     end % for irun = runs 

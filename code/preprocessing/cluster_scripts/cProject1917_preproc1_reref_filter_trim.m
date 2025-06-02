@@ -1,9 +1,12 @@
+
+numCores = 6; % to run in parallel the 6 runs
+parpool('local',numCores)
 addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
 rootdir = "/mnt/storage/tier2/ingdev/projects/Project1917"
-subjects=4:10
+subjects=5:10
 runs=1:6
 preproc_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/data_preproc"
-for isub=subjects
+parfor isub=subjects
     isub
     for irun=runs
         cProject1917_preproc1_reref_filt_trim(isub, irun, rootdir, preproc_dir)

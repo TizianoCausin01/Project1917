@@ -1,12 +1,16 @@
-addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
+
+numCores = 6; % to run in parallel the 6 runs
+parpool('local',numCores)
+addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
 ft_defaults
-preproc_dir = '/Volumes/TIZIANO/data_preproc';
+root_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/data_preproc"
 
 parms = [];
 parms.cluster = 0;
 parms.subjects = 3;
 parms.ROIs = 2;% 1 = all sensors, 2 = occipito-parietal sensors
 parms.fsNew = 500;% sampling frequency to downsample to neural data to
+disp("fnNew=500")
 parms.neuralSmoothing = 23;% smoothing in samples, because that's what ft_preproc_smooth uses, should be odd number of samples
 parms.MNN = 0; % Multivariate Noise Normalization: 0 = no MNN, 1 = MNN using trials as observations, 2 = MNN using time as observations
 parms.rej_bad_muscle = 0;% 0 to keep bad muscle segments in, 1 to reject them
@@ -17,8 +21,8 @@ parms.rej_bad_comp = 2;% 1 to remove all bad components, 2 to keep eye-movement 
 subjects = 3:10;
 rois = 1:6;
 for isub=subjects
-    for iroi=rois
-        Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
+    parfor iroi=rois
+        Project1917_preproc5_4TizianoSISSA(root_dir, parms,isub,iroi)
     end %for iroi=rois
 end % for isub=subjects
 function Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
@@ -39,14 +43,14 @@ function Project1917_preproc5_4TizianoSISSA(preproc_dir, parms,isub,iroi)
 
 % prepare layout
 cfg = [];
-cfg.layout = '/Users/tizianocausin/Desktop/programs/fieldtrip-20240110/template/layout/CTF275.lay'; %added the full path otherwise it wasn't working
+cfg.layout = '/home/tiziano.causin/adds_on/fieldtrip-20250114/template/layout/CTF275.lay'; %added the full path otherwise it wasn't working
 layout = ft_prepare_layout(cfg);
 layout = layout.label;
 
 % prepare neighbourhood structure
 cfg = [];
 cfg.method = 'template';
-cfg.template = 'CTF275_neighb.mat';
+cfg.template = '/home/tiziano.causin/adds_on/fieldtrip-20250114/template/neighbours/CTF275_neighb.mat';
 neighbours = ft_prepare_neighbours(cfg);
 indir = sprintf('%s%ssub-%03d%spreprocessing',preproc_dir,filesep,isub, filesep);
 outdir = sprintf('%s%ssub-%03d%spreprocessing',preproc_dir,filesep,isub,filesep);

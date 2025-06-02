@@ -1,7 +1,7 @@
 addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
 ft_defaults
 preproc_dir = '/Volumes/TIZIANO/data_preproc';
-subjects = 9:10;
+subjects = 10;
 target_runs = 1:6;
 for isub = subjects
     tProject1917_preproc2_cleaning(preproc_dir, isub, target_runs)

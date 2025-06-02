@@ -11,12 +11,12 @@
 #$ -j yes 
 # 
 # RAM required
-#$ -l h_vmem=40G
-#
+#$ -l h_vmem=100G
+#$ -pe smp 6
 ###################
-cd $SGE_O_WORKDIR
+cd /mnt/storage/tier2/ingdev/projects/TIZIANO/Project1917/code/preprocessing/cluster_scripts/
 # Call Matlab
-/state/partition1/MATLAB/R2020a/bin/matlab -nodesktop -nosplash -nojvm -nodisplay -r "cProject1917_preproc1_reref_filter_trim; exit;" 
+/state/partition1/MATLAB/R2020a/bin/matlab -nodesktop -nosplash -nodisplay -r "cProject1917_preproc1_reref_filter_trim; exit;" 
 
 
 

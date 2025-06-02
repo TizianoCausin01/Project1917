@@ -1,7 +1,7 @@
 #!/bin/bash
 # 
 # Job name 
-#$ -N preproc3
+#$ -N dRSA_1_2
 #$ -l h_rt=20:00:00
 #
 # Log file
@@ -12,11 +12,11 @@
 # 
 # RAM required
 #$ -l h_vmem=250G
-#$ -pe smp 8
+#$ -pe smp 6
 ###################
-cd $SGE_O_WORKDIR
+cd /mnt/storage/tier2/ingdev/projects/TIZIANO/Project1917/code/dRSA/cluster_scripts/
 # Call Matlab
-/state/partition1/MATLAB/R2020a/bin/matlab -nodesktop -nosplash -nojvm -nodisplay -r "cProject1917_preproc3_ICA; exit;" 
+/state/partition1/MATLAB/R2020a/bin/matlab -nodesktop -nosplash -nodisplay -r "cProject1917_1_2dRSA; exit;" 
 
 
 

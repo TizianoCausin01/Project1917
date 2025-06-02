@@ -1,31 +1,85 @@
+close all; clearvars; clc
+numCores = 3; % to run in parallel the 6 runs
+parpool('local',numCores)
+addpath('/Users/tizianocausin/Desktop/programs/fieldtrip-20240110')
+% set directories
+% rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
+preproc_dir = '/Volumes/TIZIANO/data_preproc';
+models_dir = "/Volumes/TIZIANO/models"; 
+results_dir = "/Volumes/TIZIANO/results";
+% addpath(genpath(rootdir));
+% codeDir='/Users/tizianocausin/Desktop/backUp20240609/summer2024/dondersInternship/code'; %!!CHANGED TO ADD THE PATH TO THE CODE WHICH IS SEPARATE FROM THE DATA REP
+% addpath(genpath(codeDir))
+% set dRSA parameters
+% general parameters
+parms = [];
+parms.fsNew = 50;% here match the chosen neural sampling rate
+% parms.subjects = 3:15;
+parms.subjects = 3:4; %!!CHANGED BC I ONLY HAVE SUB03
+parms.repetitions = 1:2;
+parms.ROInames = {'allsens', 'occpar','occ', 'par', 'tem', 'fro'};
+parms.ROI = 1:6;% 1 = all MEG sensors, 2 = occipito-parietal
+parms.modelnames = {'pixelwise'} %,'OFmag','OFdir'};
+parms.models2test = 1:3;% 
+parms.OFtempres = 24;% whether to use OF models computed on 12 Hz downsampled or 24 Hz original movie data, or on both
+parms.gazedep = 0;% whether to use  gaze-invariant models (0), or gaze-dependent models (1) or both
 
-function Project1917_dRSA(parms,isub,irep,imod,iroi,ires,igaze)
+% preprocessing parameters
+parms.gazeradius = 250;% circle size around gaze location in pixels
+parms.rej_bad_muscle = 0;% 0 to keep bad muscle segments in, 1 to reject them
+parms.rej_bad_lowfreq = 1;% 0 to keep low-freq noise segments in, 1 to reject them
+parms.bad_seg_interp = 1;% 0 to replace bad segments with NaNs and ignore in final analysis, 1 to interpolate
+parms.rej_bad_comp = 2;% 1 to remove all bad components, 2 to keep eye-movement components in
+
+% dRSA parameters
+parms.MNN = 0;
+parms.smoothNeuralRDM = 5;% Smoothing of neural RDM in samples. Has to be odd number, because includes centre point!  
+parms.smoothModelRDM = 5;% same for model RDM
+parms.similarity = 0;% 0 = correlation, 1 = principal component regression
+parms.nPCRcomps = 75;% in case of pcr, maximum amount of PCR components to regress out
+
+% temporal subsampling parameters
+parms.nstim = 180; % # of pseudo-stimuli to cut out of movie for each subsampling iteration 
+parms.stimlen = 10;% length of pseudo-stimuli in seconds
+parms.iterations = 3; %00;
+parms.minISI = 1;% minimum inter-stimulus-interval in seconds; 0 means pseudo-stimuli can touch each other
+parms.maxlatency = 5;% max latency to test with dRSA latency plots in sec
+
+% cluster or locally
+%parms.cluster = 1; %!!CHANGED BC NO CLUSTER NEEDED 
+isub = 4; irep = 1; imod = 1; iroi = 1; ires = 24; igaze = 0;
+parfor iroi = 1:6
+    Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze)
+end % parfor iroi = 1:6
+
+function Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze)
 if ires == 12 && imod == 1% 12Hz models don't exist for pixelwise
     return
 end
 
-if isfield(parms,'cluster')
-    % set paths
-    rootdir = '//mnt/storage/tier2/morwur/Projects/INGMAR/Project1917';
-    % start up Fieldtrip
-    addpath('//mnt/storage/tier2/morwur/Projects/INGMAR/toolboxes/fieldtrip-20231220');
-    warning('off')% we don't see warnings on the cluster anyway and might take extra time to print
-else
-    % set paths
-    rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
-    % start up Fieldtrip
-    addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
-end
+% if isfield(parms,'cluster')
+%     % set paths
+%     rootdir = '//mnt/storage/tier2/morwur/Projects/INGMAR/Project1917';
+%     % start up Fieldtrip
+%     addpath('//mnt/storage/tier2/morwur/Projects/INGMAR/toolboxes/fieldtrip-20231220');
+%     warning('off')% we don't see warnings on the cluster anyway and might take extra time to print
+% else
+%     % set paths
+%     rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
+%     % start up Fieldtrip
+%     addpath('\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\toolboxes\fieldtrip-20231220')
+% end
 
 % start up Fieldtrip
 %ft_defaults
 
-%% input and output folders
-indirMEG = sprintf('%s%sdata%ssub-%03d%spreprocessed',rootdir,filesep,filesep,isub,filesep);
+% input and output folders
+indirMEG = sprintf('%s%ssub-%03d%spreprocessing', preproc_dir,filesep,isub,filesep);
 if igaze == 1% gaze-dependent models
-    indirMOD = sprintf('%s%sdata%ssub-%03d%smodels',rootdir,filesep,filesep,isub,filesep);    
+    indirMOD = sprintf('%s%ssub-%03d%smodels',models_dir,filesep,isub,filesep);    
 else% gaze-invariant models
-    indirMOD = sprintf('%s%sdata%smodels',rootdir,filesep,filesep);
+    % indirMOD = sprintf('%s%smodels',models_dir,filesep);
+    indirMOD = models_dir;
 end
 
 if parms.similarity == 0
@@ -34,8 +88,8 @@ elseif parms.similarity == 1
     simstring = ['pcr_' num2str(parms.nPCRcomps) 'comps'];
 end
 
-outdir = sprintf('%s%sresults%sdRSA%s%s%s%dHz_%dstim_%dsec_%diter_%dMNN%ssub%03d',...
-    rootdir,filesep,filesep,filesep,simstring,filesep,parms.fsNew,parms.nstim,parms.stimlen,parms.iterations,parms.MNN,filesep,isub);
+outdir = sprintf('%s%sdRSA%s%s%s%dHz_%dstim_%dsec_%diter_%dMNN%ssub%03d',...
+    results_dir,filesep,filesep,simstring,filesep,parms.fsNew,parms.nstim,parms.stimlen,parms.iterations,parms.MNN,filesep,isub)
 if ~exist(outdir,'dir')
     mkdir(outdir);
 end
@@ -44,12 +98,16 @@ end
 % outdir, filesep, parms.ROInames{iroi}, parms.modelnames{imod}, ires, irep, igaze, parms.gazeradius);
 %!!CHANGED not sure what it does
 
-%% load MEG and model data
+% load MEG and model data
 % MEG data
-fn2load = sprintf('%s%ssub%03d_%s_%dHz_MNN%d_badmuscle%d_badlowfreq%d_badsegint%d_badcomp%d',...
-    indirMEG,filesep,isub,parms.ROInames{iroi},parms.fsNew,parms.MNN,parms.rej_bad_muscle,parms.rej_bad_lowfreq,parms.bad_seg_interp,parms.rej_bad_comp);
-load(fn2load,'data_final');
+% fn2load = sprintf('%s%ssub%03d_%s_%dHz_MNN%d_badmuscle%d_badlowfreq%d_badsegint%d_badcomp%d',...
+%     indirMEG,filesep,isub,parms.ROInames{iroi},parms.fsNew,parms.MNN,parms.rej_bad_muscle,parms.rej_bad_lowfreq,parms.bad_seg_interp,parms.rej_bad_comp);
+fn2load = sprintf('%s%ssub%03d_%s_%dHz.',...
+     indirMEG,filesep,isub,parms.ROInames{iroi},parms.fsNew);
 
+% load(fn2load,'data_final');
+load(fn2load)
+data_final = data.trial % my preproc5 didn't have data_final, so I am doing it now
 % select current repetition
 runIDs = 3*irep-2:3*irep;
 data_final = data_final(runIDs);
@@ -123,7 +181,7 @@ clear vecrep_all
 %     end
 % end
 
-%% create indices for random subsampling of cfg.nstim pseudo-stimuli over cfg.iterations iterations
+% create indices for random subsampling of cfg.nstim pseudo-stimuli over cfg.iterations iterations
 % make sure rand numbers are different for each subject, each ROI, and each time this script is ran at a different time and date
 rng(isub*10^7+iroi*10^6+second(datetime('now'))*10^4);
 framenumtot = size(dataMEG,2);
@@ -185,24 +243,24 @@ for iter = 1:parms.iterations
 end
 
 % quick whether our mask is correct, and our onsetIDs don't overlap with the mask
-if ~isfield(parms,'cluster')
-    selectedIDs = zeros(parms.iterations,framenumtot);
-    for iter = 1:parms.iterations
-        for istim = 1:parms.nstim
-            selectedIDs(iter,onsetIDiter(iter,istim):onsetIDiter(iter,istim)+parms.stimlen*parms.fsNew-1) = 1;
-        end
-    end
-    figure;
-    subplot(2,1,1);
-    imagesc(repmat(mask,parms.iterations,1));
-    title('mask');
-    subplot(2,1,2);
-    imagesc(selectedIDs)
-    title('pseudo-stimuli')
-    clear selectedIDs
-end
+% if ~isfield(parms,'cluster')
+%     selectedIDs = zeros(parms.iterations,framenumtot);
+%     for iter = 1:parms.iterations
+%         for istim = 1:parms.nstim
+%             selectedIDs(iter,onsetIDiter(iter,istim):onsetIDiter(iter,istim)+parms.stimlen*parms.fsNew-1) = 1;
+%         end
+%     end
+%     figure;
+%     subplot(2,1,1);
+%     imagesc(repmat(mask,parms.iterations,1));
+%     title('mask');
+%     subplot(2,1,2);
+%     imagesc(selectedIDs)
+%     title('pseudo-stimuli')
+%     clear selectedIDs
+% end
 
-%% compute dRSA across iterations
+% compute dRSA across iterations
 % set some parameters
 framenum = parms.stimlen*parms.fsNew;
 tRange=parms.maxlatency*parms.fsNew;% in samples
@@ -210,7 +268,7 @@ latencytime = -parms.maxlatency:1/parms.fsNew:parms.maxlatency;
 pseudotime = 0:1/parms.fsNew:framenum/parms.fsNew-1/parms.fsNew;
 
 dRSAlatency = zeros(parms.iterations,length(latencytime),'single');
-for iter = 1:parms.iterations
+parfor iter = 1:parms.iterations
 
     clc;
     disp(['Running dRSA iteration ' num2str(iter) ' of ' num2str(parms.iterations)]);
@@ -289,6 +347,8 @@ end
 
 % average over iterations
 dRSA = squeeze(mean(dRSAlatency));
-
+fn2save = sprintf("%s%sdRSA_%s_sub%03d_%s_rep%d_%dHz", results_dir, filesep, simstring, isub, parms.modelnames{imod}, irep, parms.fsNew)
 % save dRSA results
 save(fn2save,'dRSA','latencytime');
+end %EOF
+

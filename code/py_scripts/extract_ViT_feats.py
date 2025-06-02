@@ -5,35 +5,32 @@ import torch
 import cv2
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
+from transformers import ViTImageProcessor, ViTForImageClassification
 from torchvision import models
 import numpy as np
 import h5py
 
-alexnet = models.alexnet(weights=True).eval()
-preprocess = transforms.Compose(
-    [
-        transforms.ToPILImage(),
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.3806, 0.4242, 0.3794], std=[0.2447, 0.2732, 0.2561]
-        ),  # Normalization for pretrained model
-    ]
-)
+# %%
+processor = ViTImageProcessor.from_pretrained("google/vit-base-patch16-224")
+ViT = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224")
+
+
+# %%
 
 path2vid = "/Volumes/TIZIANO/stimuli/Project1917_movie_part3_24Hz.mp4"
 reader = cv2.VideoCapture(path2vid)
-
+# %%
 conv_layers = [
-    "conv_layer1",
-    "conv_layer4",
-    "conv_layer7",
-    "conv_layer9",
-    "conv_layer11",
+    "real_conv_layer1",
+    "real_conv_layer4",
+    "real_conv_layer7",
+    "real_conv_layer9",
+    "real_conv_layer11",
 ]
-conv_layers_idx = [1, 4, 7, 9, 11]
-fc_layers = ["fc_layer2", "fc_layer5"]
-fc_layers_idx = [2, 5]
+conv_layers_idx = [0, 3, 6, 8, 10]
+
+fc_layers = ["real_fc_layer2", "real_fc_layer5"]
+fc_layers_idx = [1, 4]
 # %%
 output_len_conv = [193600, 139968, 64896, 43264, 43264]
 rand_idx_conv = []
@@ -80,17 +77,31 @@ for fc_idx in range(len(fc_layers_idx)):
 
 
 feats = {
-    "conv_layer1": [],
-    "conv_layer4": [],
-    "conv_layer7": [],
-    "conv_layer9": [],
-    "conv_layer11": [],
-    "fc_layer2": [],
-    "fc_layer5": [],
+    "real_conv_layer1": [],
+    "real_conv_layer4": [],
+    "real_conv_layer7": [],
+    "real_conv_layer9": [],
+    "real_conv_layer11": [],
+    "real_fc_layer2": [],
+    "real_fc_layer5": [],
 }
 # while True:
-for i in range(2):
+# %%
+for i in range(10):
+    print("NEW FRAME")
     ret, frame = reader.read()
+    frame_tr = processor(images=frame, return_tensors="pt")
+    with torch.no_grad():
+        out = ViT(**frame_tr)
+    logits = out.logits
+    top5 = torch.topk(logits, k=5)
+    top5_scores = top5.values
+    top5_indices = top5.indices
+    for i in range(len(top5_scores[0])):
+        print(i)
+        print(f"{ViT.config.id2label[top5_indices[0][i].item()]}")
+
+    # %%
     if ret == False:
         break
     # end if ret==False:
@@ -107,7 +118,7 @@ for i in range(2):
 # %%
 irun = 5
 path2mod = "/Volumes/TIZIANO/models"
-with h5py.File(f"{path2mod}/Project1917_alexnet_run0{irun}.h5", "w") as f:
+with h5py.File(f"{path2mod}/Project1917_real_alexnet_run0{irun}.h5", "w") as f:
     # Iterate over dictionary items and save them in the HDF5 file
     for key, value in feats.items():
         f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
