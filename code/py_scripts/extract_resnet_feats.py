@@ -63,12 +63,12 @@ for idx in layers:
         count += 1
 
 path2mod = "/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/models"
-runs = [1,2,3]
+runs = [1, 2, 3]
 for irun in runs:
     feats = {"layer1": [], "layer2": [], "layer3": [], "layer4": [], "fc": []}
     print("irun:", irun)
     path2vid = f"/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/stimuli/Project1917_movie_part{irun}_24Hz.mp4"
-    print("path2vid",path2vid)
+    print("path2vid", path2vid)
     sys.stdout.flush()
     reader = cv2.VideoCapture(path2vid)
     count = 0
@@ -77,7 +77,7 @@ for irun in runs:
         if ret == False:
             break
         # end if ret==False:
-        count+=1
+        count += 1
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         frame = preprocess(frame).unsqueeze(0)
         print(f"\n FRAME{count}")
@@ -88,8 +88,10 @@ for irun in runs:
                 print(categories[idx.item()])
     # while True:
     with h5py.File(f"{path2mod}/Project1917_resnet18_run0{irun}.h5", "w") as f:
-    # Iterate over dictionary items and save them in the HDF5 file
+        # Iterate over dictionary items and save them in the HDF5 file
         for key, value in feats.items():
-            f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
+            f.create_dataset(
+                key, data=value
+            )  # Create a dataset for each key-value pair
     # for irun in runs
 # %%
