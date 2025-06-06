@@ -14,9 +14,9 @@ import h5py
 
 pipeline = pipeline(
     task="image-classification",
-    model="google/vit-base-patch16-224",
+    model="/leonardo/home/userexternal/tcausin0/virtual_envs/1917_py_env/vit_model",
     torch_dtype=torch.float16,
-    device=0,
+    device=-1,
 )
 
 # Initializing a ViT vit-base-patch16-224 style configuration
@@ -37,8 +37,7 @@ image_processor.image_mean = [
     0.3794,
 ]  # custom parameters for normalization
 image_processor.image_std = [0.2447, 0.2732, 0.2561]
-model = ViTForImageClassification.from_pretrained("google/vit-base-patch16-224")
-
+model = ViTForImageClassification.from_pretrained("/leonardo/home/userexternal/tcausin0/virtual_envs/1917_py_env/vit_model")
 num_patches = 14**2
 layer_dim = 768
 out_dim = (num_patches + 1) * layer_dim
@@ -74,19 +73,19 @@ for block_idx in range(encoder_blocks):
     )
 
 
-# path2mod = "/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/models"
-path2mod = "/Volumes/TIZIANO/models"
+path2mod = "/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/models"
+#path2mod = "/Volumes/TIZIANO/models"
 runs = [1, 2, 3]
 for irun in runs:
     feats = {str(i): [] for i in range(encoder_blocks + 1)}  # adds the logits
     print("irun:", irun)
-    # path2vid = f"/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/stimuli/Project1917_movie_part{irun}_24Hz.mp4"
-    path2vid = f"/Volumes/TIZIANO/stimuli/Project1917_movie_part{irun}_24Hz.mp4"
+    path2vid = f"/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/stimuli/Project1917_movie_part{irun}_24Hz.mp4"
+    #path2vid = f"/Volumes/TIZIANO/stimuli/Project1917_movie_part{irun}_24Hz.mp4"
     print("path2vid", path2vid)
     sys.stdout.flush()
     reader = cv2.VideoCapture(path2vid)
-    # while True:
-    for i in range(3):
+    while True:
+    #for i in range(3):
         ret, frame = reader.read()
         if ret == False:
             break
