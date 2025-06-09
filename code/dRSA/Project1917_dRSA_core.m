@@ -1,68 +1,4 @@
-smclose all; clearvars; clc
-
-numCores = 6; % to run in parallel the 6 rois
-parpool('local',numCores)
-addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
-ft_defaults
-% set directories
-% rootdir = '\\cimec-storage5.unitn.it\MORWUR\Projects\INGMAR\Project1917';
-preproc_dir = '/mnt/storage/tier2/ingdev/projects/TIZIANO/data_preproc';
-models_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/models";
-results_dir = "/mnt/storage/tier2/ingdev/projects/TIZIANO/results";
-% addpath(genpath(rootdir));
-% codeDir='/Users/tizianocausin/Desktop/backUp20240609/summer2024/dondersInternship/code'; %!!CHANGED TO ADD THE PATH TO THE CODE WHICH IS SEPARATE FROM THE DATA REP
-% addpath(genpath(codeDir))
-% set dRSA parameters
-% general parameters
-parms = [];
-parms.fsNew = 50;% here match the chosen neural sampling rate
-% parms.subjects = 3:15;
-parms.subjects =3:10 ;
-parms.repetitions = 1:2;
-parms.ROInames = {'allsens', 'occpar','occ', 'par', 'tem', 'fro'};
-parms.ROI = 1;% 1 = all MEG sensors, 2 = occipito-parietal
-%parms.modelnames = {"OFdir", "dg_map", "dg_map_KLD","alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5", "gbvs_map", "gbvs_map_KLD", "pixelwise","OFmag"}
-parms.modelnames = {"resnet18_layer1", "resnet18_layer2", "resnet18_layer3", "resnet18_layer4", "resnet18_fc"}
-parms.OFtempres = 24;% whether to use OF models computed on 12 Hz downsampled or 24 Hz original movie data, or on both
-parms.gazedep = 0;% whether to use  gaze-invariant models (0), or gaze-dependent models (1) or both
-
-% preprocessing parameters
-parms.gazeradius = 250;% circle size around gaze location in pixels
-parms.rej_bad_muscle = 0;% 0 to keep bad muscle segments in, 1 to reject them
-parms.rej_bad_lowfreq = 1;% 0 to keep low-freq noise segments in, 1 to reject them
-parms.bad_seg_interp = 1;% 0 to replace bad segments with NaNs and ignore in final analysis, 1 to interpolate
-parms.rej_bad_comp = 2;% 1 to remove all bad components, 2 to keep eye-movement components in
-
-% dRSA parameters
-parms.MNN = 0;
-parms.smoothNeuralRDM = 5;% Smoothing of neural RDM in samples. Has to be odd number, because includes centre point!
-parms.smoothModelRDM = 5;% same for model RDM
-parms.similarity = 0;% 0 = correlation, 1 = principal component regression
-parms.nPCRcomps = 75;% in case of pcr, maximum amount of PCR components to regress out
-
-% temporal subsampling parameters
-parms.nstim = 180; % # of pseudo-stimuli to cut out of movie for each subsampling iteration
-parms.stimlen = 10;% length of pseudo-stimuli in seconds
-parms.iterations = 100; %00;
-parms.minISI = 1;% minimum inter-stimulus-interval in seconds; 0 means pseudo-stimuli can touch each other
-parms.maxlatency = 5;% max latency to test with dRSA latency plots in sec
-ires = 24; igaze=0;
-% cluster or locally
-%parms.cluster = 1; %!!CHANGED BC NO CLUSTER NEEDED
-for isub=parms.subjects
-    for irep=parms.repetitions
-        for imod=1:length(parms.modelnames)
-            parfor iroi=1:6
-                roi_name = parms.ROInames{iroi}
-                Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze, roi_name)
-            end % parfor iroi = 1:6
-        end %for imod=1:length(parms.modelnames)
-    end %for irep=parms.repetitions
-end %for isub=parms.subjects
-function Project1917_dRSA(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze, roi_name)
-if ires == 12 && imod == 1% 12Hz models don't exist for pixelwise
-    return
-end
+function Project1917_dRSA_core(preproc_dir, models_dir, results_dir,  parms,isub,irep,imod,iroi,ires, igaze, roi_name, mod_name)
 
 % input and output folders
 indirMEG = sprintf('%s%ssub-%03d%spreprocessing', preproc_dir,filesep,isub,filesep);
@@ -344,7 +280,7 @@ end
 
 % average over iterations
 dRSA = squeeze(mean(dRSAlatency));
-fn2save = sprintf("%s%sdRSA_%s_sub%03d_%s_%s_rep%d_%dHz.mat", outdir, filesep, simstring, isub, parms.modelnames{imod}, roi_name, irep, parms.fsNew);
+fn2save = sprintf("%s%sdRSA_%s_sub%03d_%s_%s_rep%d_%dHz.mat", outdir, filesep, simstring, isub, mod_name, roi_name, irep, parms.fsNew);
 % save dRSA results
 save(fn2save,'dRSA','latencytime');
 disp("done:")
