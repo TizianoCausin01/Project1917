@@ -8,8 +8,8 @@ results_dir = sprintf("/Volumes/TIZIANO/results/corr/%dHz_180stim_10sec_100iter_
 % parms.modelnames = {"OFdir", "dg_map", "dg_map_KLD","alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5", "gbvs_map", "gbvs_map_KLD", "pixelwise","OFmag"};
 %parms.modelnames = {"real_alexnet_real_conv_layer1", "real_alexnet_real_conv_layer4", "real_alexnet_real_conv_layer7", "real_alexnet_real_conv_layer9", "real_alexnet_real_conv_layer11", "real_alexnet_real_fc_layer2", "real_alexnet_real_fc_layer5"};
 parms.modelnames = {"resnet18_layer1","resnet18_layer2","resnet18_layer3","resnet18_layer4", "resnet18_fc"}
-iroi = "tem";
-upper_y_lim = 0.05;
+iroi = "par";
+upper_y_lim = 0.03;
 plot_resultss(results_dir,iroi, parms, upper_y_lim, 1)
 function plot_resultss(results_directory,iroi,parms, upper_y_lim, save)
 % inputs:

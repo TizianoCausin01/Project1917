@@ -1,4 +1,4 @@
-function cProject1917_dRSA_general(subjects, models,ROIs)
+function cProject1917_dRSA_general(subjects, models,ROIs, nproc)
 
 % Calls Project_dRSA_core with the right parameters. It's a function so
 % that I can call it with the right args from a job script.
@@ -15,8 +15,7 @@ function cProject1917_dRSA_general(subjects, models,ROIs)
 
 
 %FIXME add outside the script 
-% numCores = 6; % to run in parallel the 6 rois 
-% parpool('local',numCores)
+parpool('local',nproc)
 addpath("/home/tiziano.causin/adds_on/fieldtrip-20250114")
 ft_defaults
 % set directories
@@ -28,22 +27,20 @@ parms.fsNew = 50;% here match the chosen neural sampling rate
 % parms.subjects = 3:15;
 parms.subjects =subjects ;
 parms.repetitions = 1:2;
-if ROIs == 1 % if ROIs == 1 do all
+if strcmp(class(ROIs{1}),'double') % if ROIs == 1 do all
     parms.ROInames = {'allsens', 'occpar','occ', 'par', 'tem', 'fro'};
 else % otherwise specify which ones
     parms.ROInames = ROIs
 end % if ROIs == 1
-if strcmp(class(models), 'string')
-    if strcmp(models, 'alexnet')
-        parms.modelnames = {"real_conv_layer1", "real_conv_layer4", "real_conv_layer7", "real_conv_layer9", "real_conv_layer11", "real_fc_layer2", "real_fc_layer5"};
-    elseif strcmp(models, 'resnet18')
+    if strcmp(models{1}, 'alexnet')
+        parms.modelnames = {"alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5"};
+    elseif strcmp(models{1}, 'resnet18')
         parms.modelnames = {"resnet18_layer1", "resnet18_layer2", "resnet18_layer3", "resnet18_layer4", "resnet18_fc"};
-    elseif strcmp(models, 'ViT')
+    elseif strcmp(models{1}, 'ViT')
         parms.modelnames = {"ViT_layer0", "ViT_layer1", "ViT_layer2", "ViT_layer3", "ViT_layer4", "ViT_layer5", "ViT_layer6", "ViT_layer7", "ViT_layer8", "ViT_layer9", "ViT_layer10", "ViT_layer11", "ViT_layer12"};
-    end % if strcmp(models, 'alexnet')
-elseif strcmpclass(models, 'cell')
+else
     parms.modelnames = models
-end % if strcmp(class(models) == 'string')
+end % if strcmp(models{1}, 'alexnet')
 
 parms.OFtempres = 24;% whether to use OF models computed on 12 Hz downsampled or 24 Hz original movie data, or on both
 parms.gazedep = 0;% whether to use  gaze-invariant models (0), or gaze-dependent models (1) or both

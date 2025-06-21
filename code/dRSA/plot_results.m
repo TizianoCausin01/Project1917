@@ -2,14 +2,14 @@
 % 
 results_dir = "/Volumes/TIZIANO/results/corr/50Hz_180stim_10sec_100iter_0MNN";
 parms=[]
-parms.subjects = 3:10;
+parms.subjects = [3:10];
 parms.fsNew = 50;
 % parms.modelnames = {"OFdir", "dg_map", "dg_map_KLD","alexnet_conv_layer1", "alexnet_conv_layer4", "alexnet_conv_layer7", "alexnet_conv_layer9", "alexnet_conv_layer11", "alexnet_fc_layer2", "alexnet_fc_layer5", "gbvs_map", "gbvs_map_KLD", "pixelwise","OFmag"};
 %parms.modelnames = {"real_alexnet_real_conv_layer1", "real_alexnet_real_conv_layer4", "real_alexnet_real_conv_layer7", "real_alexnet_real_conv_layer9", "real_alexnet_real_conv_layer11", "real_alexnet_real_fc_layer2", "real_alexnet_real_fc_layer5"};
 parms.modelnames = {"resnet18_layer1","resnet18_layer2","resnet18_layer3","resnet18_layer4", "resnet18_fc"}
-iroi = "occ";
-upper_y_lim = 0.003;
-plot_resultss(results_dir, parms.modelnames{5},iroi, parms, upper_y_lim)
+iroi = "tem";
+upper_y_lim = 0.006;
+plot_resultss(results_dir, "gbvs_map",iroi, parms, upper_y_lim)
 function plot_resultss(results_directory,imod,iroi,parms, upper_y_lim)
 % inputs:
 % - results_directory
@@ -53,7 +53,7 @@ yticks(-.002:.001:1)
 ylim([-.002 upper_y_lim])
 xlim([-5 5])
 xline([0 0]) %,'w')
-title([imod])
+title([imod, iroi])
 ax = gca;
 % ax.XColor = 'w';
 % ax.YColor = 'w';
@@ -62,6 +62,7 @@ ax = gca;
 annotation('textbox',[0.15, 0.8, 0.1, 0.1], 'String',['rep1 = ' num2str(peakLatency{1}),'; rep2 = ', num2str(peakLatency{2})])
 hold off
 path2save = "/Users/tizianocausin/Library/CloudStorage/OneDrive-SISSA/SIP/figures_SIP/figures_caos_poster";
-fig2save = sprintf("%s/%s_white.png", path2save, imod)
-exportgraphics(gcf, fig2save, 'BackgroundColor', 'white')
+fig2save = sprintf("%s/%s_%s_white.png", path2save, imod, iroi)
+% exportgraphics(gcf, fig2save, 'BackgroundColor', 'white')
+saveas(gcf,fig2save)
 end %EOF
