@@ -1,4 +1,4 @@
-
+# TODO if person boxes is empty fill it with all nans
 # tutorial from https://huggingface.co/docs/transformers/en/model_doc/vitpose
 from transformers import AutoProcessor, RTDetrForObjectDetection, VitPoseForPoseEstimation
 import torch
@@ -7,6 +7,9 @@ from PIL import Image
 import numpy as np
 import cv2
 import h5py
+from scipy.linalg import inv
+from numpy.linalg import inv
+from datetime import datetime
 
 def fill_in_res(res: list, key: str, size: tuple, top_k: int, box=0): 
     if box == 0:
@@ -28,30 +31,30 @@ feats = {
     "boxes" : [], 
     "score_boxes" : [],
     "score_kpts" : [], 
-    "head_kpts" : [],
-    "score_heads" : []
 }
 
 # 1 - load video
-path2mod = "/leonardo_work/Sis25_piasini/tcausin/Project1917/models"
+path2mod = "/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/models"
 
-# 2 - load models
+# 2 - load models TODO load all models locally (4)
 device = "cuda" if torch.cuda.is_available() else "cpu"
-person_image_processor = AutoProcessor.from_pretrained("PekingU/rtdetr_r50vd_coco_o365") # loads a preprocessing pipeline img (to ensure same preproc.g)
-person_model = RTDetrForObjectDetection.from_pretrained("PekingU/rtdetr_r50vd_coco_o365", device_map=device) # loads the object detection model:  RT-DETR object detection model (detectiion + label.g -> label 0 = person)
-#inputs = person_image_processor(images=image, return_tensors="pt").to(device) # preprocesses the image and returns it as a tensor
-# returns an object of type <class 'transformers.image_processing_base.BatchFeature'> -> behaves like a dict e.g. inputs.keys() -> 'pixel_values' i.e. the normalized img tensor of shape 2, 3, 256, 192
-image_processor = AutoProcessor.from_pretrained("usyd-community/vitpose-base-simple") # downloads a processor tailored for the vitpose-base-simple model, it resizes, normalizes, and formats input data (cropping each detected person), automatically includes COCO keypoint configuration.
-model = VitPoseForPoseEstimation.from_pretrained("usyd-community/vitpose-base-simple", device_map=device) #downloads ViTPose
+person_image_processor = AutoProcessor.from_pretrained("/leonardo_work/Sis25_piasini/tcausin/Project1917/huggingface_models/rtdetr_r50vd_coco_o365", local_files_only=True)
+person_model = RTDetrForObjectDetection.from_pretrained("/leonardo_work/Sis25_piasini/tcausin/Project1917/huggingface_models/rtdetr_r50vd_coco_o365", local_files_only=True) # loads the object detection model:  RT-DETR object detection model (detectiion + label.g -> label 0 = person)
+image_processor = AutoProcessor.from_pretrained("/leonardo_work/Sis25_piasini/tcausin/Project1917/huggingface_models/vitpose-base-simple", local_files_only=True) # downloads a processor tailored for the vitpose-base-simple model, it resizes, normalizes, and formats input data (cropping each detected person), automatically includes COCO keypoint configuration.
+model = VitPoseForPoseEstimation.from_pretrained("/leonardo_work/Sis25_piasini/tcausin/Project1917/huggingface_models/vitpose-base-simple", local_files_only=True)#downloads ViTPose
 
 # 3 - read frame and preprocess it
 runs = [1,2,3]
-for irun in runs  
+for irun in runs: 
     path2vid = f"/leonardo_scratch/fast/Sis25_piasini/tcausin/Project1917/stimuli/Project1917_movie_part{irun}_24Hz.mp4"
+    print(datetime.now().strftime("%H:%M:%S")," - irun:", irun, flush=True)
+    count = 0
     reader = cv2.VideoCapture(path2vid)
     while True:
+        reader.set(cv2.CAP_PROP_POS_FRAMES, 2947)
         ret, frame = reader.read()
-        
+        count += 1
+        print(datetime.now().strftime("%H:%M:%S")," - frame", count, flush=True)
         if ret == False:
             break
         # end if ret==False:
@@ -72,7 +75,7 @@ for irun in runs
         )[0] # selects the first element in the list bc only one img
         
         person_boxes = result["boxes"][result["labels"] == 0] # index only the boxes associated with label 0 (person) in COCO class labels
-        
+        print("person_boxes", person_boxes, flush=True)
         score_boxes = result["scores"][result["labels"] == 0]
         score_boxes = score_boxes.cpu().numpy()
         # score_boxes_store = fill_in_res(person_boxes, "scores", (1, 1), 5) 
@@ -82,7 +85,7 @@ for irun in runs
         person_boxes[:, 3] = person_boxes[:, 3] - person_boxes[:, 1] 
         
     # 6 - preprocess for kpt detection
-        inputs = image_processor(frame_rgb, boxes=[person_boxes], return_tensors="pt").to(device) # processes the original image using the bounding boxes -> ViTPose expects tightly cropped pics
+        inputs = image_processor([frame_rgb], boxes=[person_boxes], return_tensors="pt").to(device) # processes the original image using the bounding boxes -> ViTPose expects tightly cropped pics
         # inputs is a dict like type with "pixels_value" as only entry. It is a tensor [Batch, Channels, Height, Width] -> Batch is the number of people detected
         with torch.no_grad():
             outputs = model(**inputs) # runs ViTPose
@@ -95,7 +98,9 @@ for irun in runs
         feats["kpts"].append(kpts_store)
         feats["score_kpts"].append(kpts_scores_store)
         feats["score_boxes"].append(score_boxes_store)
-        with h5py.File(f"{path2mod}/Project1917_ViTPose_run0{irun}.h5", "w") as f:
-            # Iterate over dictionary items and save them in the HDF5 file
-            for key, value in feats.items():
-                f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
+    print(datetime.now().strftime("%H:%M:%S")," - starting saving run", irun, flush=True)
+    with h5py.File(f"{path2mod}/Project1917_ViTPose_run0{irun}.h5", "w") as f:
+        # Iterate over dictionary items and save them in the HDF5 file
+        for key, value in feats.items():
+            f.create_dataset(key, data=value)  # Create a dataset for each key-value pair
+    print(datetime.now().strftime("%H:%M:%S")," - finished saving run", irun, flush=True)
